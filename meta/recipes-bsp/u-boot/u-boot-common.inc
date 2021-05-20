@@ -14,7 +14,9 @@ PE = "1"
 # repo during parse
 SRCREV = "866ca972d6c3cabeaf6dbac431e8e08bb30b3c8e"
 
-SRC_URI = "git://source.denx.de/u-boot/u-boot.git;protocol=https;branch=master"
+SRC_URI = "git://source.denx.de/u-boot/u-boot.git;protocol=https;branch=master \
+           file://0001-include-config_distro_bootcmd.h-Check-go-before-boot.patch \
+"
 
 S = "${WORKDIR}/git"
 B = "${WORKDIR}/build"
