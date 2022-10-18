@@ -44,7 +44,7 @@ DEPENDS = " \
     virtual/${MLPREFIX}libc \
     ${MLPREFIX}elfutils \
     ${MLPREFIX}binutils \
-    bison-native flex-native xz \
+    bison-native flex-native xz python3-setuptools-native \
 "
 
 do_configure[depends] += "virtual/kernel:do_shared_workdir"
