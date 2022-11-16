@@ -243,7 +243,6 @@ def buildcfg_multilibs(d):
         localdata = bb.data.createCopy(d)
         overrides = localdata.getVar("OVERRIDES", False) + ":virtclass-multilib-" + variant
         localdata.setVar("OVERRIDES", overrides)
-        bb.data.update_data(localdata)
         statusvars = oe.data.typed_value('BUILDCFG_VARS', d)
         for var in statusvars:
             origvalue = d.getVar(var, True)

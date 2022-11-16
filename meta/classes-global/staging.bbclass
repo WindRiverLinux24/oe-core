@@ -211,7 +211,6 @@ def staging_populate_sysroot_dir(targetsysroot, nativesysroot, native, d):
             localdata = bb.data.createCopy(d)
             overrides = localdata.getVar("OVERRIDES", False) + ":virtclass-multilib-" + variant
             localdata.setVar("OVERRIDES", overrides)
-            bb.data.update_data(localdata)
             pkgarchs_ml = localdata.getVar('PACKAGE_EXTRA_ARCHS').split()
             for arch in pkgarchs_ml:
                 if arch not in pkgarchs:
