@@ -308,10 +308,21 @@ class Partition():
 
         if self.updated_fstab_path and self.has_fstab and not self.no_fstab_update:
             debugfs_script_path = os.path.join(cr_workdir, "debugfs_script")
+            fstab_label_path = os.path.join(cr_workdir, "fstab.selinuxlabel")
+            with open(debugfs_script_path, "w") as f:
+                f.write("cd etc\n")
+                # Retrieve fstab selinux label
+                f.write("ea_get -f %s fstab security.selinux\n" % (fstab_label_path))
+            debugfs_cmd = "debugfs -w -f %s %s" % (debugfs_script_path, rootfs)
+            exec_native_cmd(debugfs_cmd, native_sysroot)
+
             with open(debugfs_script_path, "w") as f:
                 f.write("cd etc\n")
                 f.write("rm fstab\n")
                 f.write("write %s fstab\n" % (self.updated_fstab_path))
+                if os.path.isfile(fstab_label_path) and os.path.getsize(fstab_label_path) > 0:
+                    # Restore fstab selinux label
+                    f.write("ea_set -f %s fstab security.selinux\n" % (fstab_label_path))
             debugfs_cmd = "debugfs -w -f %s %s" % (debugfs_script_path, rootfs)
             exec_native_cmd(debugfs_cmd, native_sysroot)
 
