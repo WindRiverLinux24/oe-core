@@ -110,7 +110,7 @@ do_compile() {
 
 do_install() {
     if ${@bb.utils.contains('PACKAGECONFIG', 'libllvm', 'true', 'false', d)}; then
-	DESTDIR=${D} ninja -v install
+        DESTDIR=${D} ninja -v install
 
         # llvm harcodes usr/lib as install path, so this corrects it to actual libdir
         mv -T -n ${D}/${prefix}/lib ${D}/${libdir} || true
@@ -121,6 +121,10 @@ do_install() {
 
         # reproducibility
         sed -i -e 's,${WORKDIR},,g' ${D}/${libdir}/cmake/llvm/LLVMConfig.cmake
+
+        # remove libLTO.so.* which should be provided by clang and packaged to
+        # llvm-linker-tools
+        rm -f ${D}/${libdir}/libLTO.so.*
     fi
 }
 
@@ -138,7 +142,7 @@ llvm_sysroot_preprocess() {
 	ln -sf llvm-config ${SYSROOT_DESTDIR}${bindir_crossscripts}/llvm-config${PV}
 }
 
-PACKAGES =+ "${PN}-bugpointpasses ${PN}-llvmhello ${PN}-libllvm ${PN}-liboptremarks ${PN}-liblto"
+PACKAGES =+ "${PN}-bugpointpasses ${PN}-llvmhello ${PN}-libllvm ${PN}-liboptremarks"
 
 RRECOMMENDS:${PN}-dev += "${PN}-bugpointpasses ${PN}-llvmhello ${PN}-liboptremarks"
 
@@ -149,10 +153,6 @@ FILES:${PN}-bugpointpasses = "\
 FILES:${PN}-libllvm = "\
     ${libdir}/libLLVM-${MAJOR_VERSION}.so \
     ${libdir}/libLLVM.so.${MAJOR_VER}.${MINOR_VER} \
-"
-
-FILES:${PN}-liblto += "\
-    ${libdir}/libLTO.so.* \
 "
 
 FILES:${PN}-liboptremarks += "\
