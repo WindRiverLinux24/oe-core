@@ -13,7 +13,9 @@ SRC_URI = "git://github.com/besser82/libxcrypt.git;branch=${SRCBRANCH};protocol=
 SRCREV = "f531a36aa916a22ef2ce7d270ba381e264250cbf"
 SRCBRANCH ?= "master"
 
-SRC_URI += "file://fix_cflags_handling.patch"
+SRC_URI += "file://fix_cflags_handling.patch \
+            file://0001-lib-util-get-random-bytes.c-fixed-conversion-error-w.patch \
+           "
 
 PROVIDES = "virtual/crypt"
 
@@ -22,6 +24,7 @@ S = "${WORKDIR}/git"
 BUILD_CPPFLAGS = "-I${STAGING_INCDIR_NATIVE}"
 TARGET_CPPFLAGS = "-I${STAGING_DIR_TARGET}${includedir} -Wno-error"
 CPPFLAGS:append:class-nativesdk = " -Wno-error"
+CFLAGS:append:class-nativesdk = " -Wno-pedantic"
 
 API = "--disable-obsolete-api"
 EXTRA_OECONF += "${API}"
