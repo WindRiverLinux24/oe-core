@@ -22,6 +22,7 @@ inherit autotools pkgconfig
 
 PACKAGECONFIG ??= "\
 	${@bb.utils.filter('DISTRO_FEATURES', 'ipv6', d)} \
+	${@bb.utils.contains('DISTRO_FEATURES', 'krb5', 'gssapi', '', d)} \
 "
 PACKAGECONFIG[ipv6] = "--enable-ipv6,--disable-ipv6"
 PACKAGECONFIG[gssapi] = "--enable-gssapi,--disable-gssapi,krb5"
