@@ -30,6 +30,7 @@ B = "${WORKDIR}/build"
 # where the issue occured
 export RUST_BACKTRACE = "1"
 
+DEBUG_BUILD = "0"
 RUSTFLAGS ??= ""
 BUILD_MODE = "${@['--release', ''][d.getVar('DEBUG_BUILD') == '1']}"
 # --frozen flag will prevent network access (which is required since only
