@@ -53,10 +53,6 @@ do_install:append() {
 	if ${@bb.utils.contains('DISTRO_FEATURES', 'pni-names', 'false', 'true', d)}; then
 		touch ${D}${sysconfdir}/udev/rules.d/80-net-name-slot.rules
 	fi
-
-	if [ ${@ oe.types.boolean('${VOLATILE_TMP_DIR}') } = False ]; then
-		sed -i -e 's%mkdir -m 1777 -p /var/volatile/tmp%mkdir -m 1777 -p /tmp%g' ${D}${sysconfdir}/init.d/udev
-	fi
 }
 
 do_install:prepend:class-target () {
