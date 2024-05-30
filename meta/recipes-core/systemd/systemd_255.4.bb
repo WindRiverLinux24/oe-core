@@ -298,21 +298,6 @@ do_install() {
 	done
 
 	install -m 0644 ${WORKDIR}/00-create-volatile.conf ${D}${nonarch_libdir}/tmpfiles.d/
-	if [ ${@ oe.types.boolean('${VOLATILE_LOG_DIR}') } = False ]; then
-		sed -i -e "/^d.*\/var\/volatile\/log/d" ${D}${nonarch_libdir}/tmpfiles.d/00-create-volatile.conf
-	fi
-
-	if [ ${@ oe.types.boolean('${VOLATILE_TMP_DIR}') } = False ]; then
-		sed -i -e "/^d.*\/var\/volatile\/tmp/d" ${D}${nonarch_libdir}/tmpfiles.d/00-create-volatile.conf
-		sed -i -e "/^L+.*\/tmp/d" ${D}${nonarch_libdir}/tmpfiles.d/00-create-volatile.conf
-	else
-		# For volatile tmp, /tmp link to /var/tmp, /var/tmp links to /var/volatile/tmp, so don't need
-		# mount /tmp again
-		rm -f ${D}${systemd_unitdir}/system/tmp.mount
-		rm -f ${D}${systemd_unitdir}/system/local-fs.target.wants/tmp.mount
-		# The age are set in 00-create-volatile.conf
-		rm -rf ${D}${nonarch_libdir}/tmpfiles.d/tmp.conf
-	fi
 
 	if ${@bb.utils.contains('DISTRO_FEATURES','sysvinit','true','false',d)}; then
 		install -d ${D}${sysconfdir}/init.d
@@ -330,6 +315,13 @@ do_install() {
 
 		# journal-remote creates this at start
 		rm -rf ${D}${localstatedir}/log/journal/remote
+	fi
+
+	# if the user requests /tmp be on persistent storage (i.e. not volatile)
+	# then don't use a tmpfs for /tmp
+	if [ "${VOLATILE_TMP_DIR}" != "yes" ]; then
+		rm -f ${D}${rootlibdir}/systemd/system/tmp.mount
+		rm -f ${D}${rootlibdir}/systemd/system/local-fs.target.wants/tmp.mount
 	fi
 
 	install -d ${D}${systemd_system_unitdir}/graphical.target.wants
