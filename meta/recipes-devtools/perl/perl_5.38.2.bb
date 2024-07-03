@@ -85,6 +85,7 @@ do_configure:class-target() {
     #the others in config.sh).
 
     sed -i -e "s,${STAGING_LIBDIR},${libdir},g" config.h
+    sed -i '/^#define.*USE_CROSS_/d' config.h
 }
 
 do_configure:class-nativesdk() {
