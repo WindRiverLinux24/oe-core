@@ -15,7 +15,7 @@ SRCBRANCH ?= "master"
 
 SRC_URI += "file://fix_cflags_handling.patch \
             file://0001-lib-util-get-random-bytes.c-fixed-conversion-error-w.patch \
-           "
+            file://configure-c99.patch"
 
 PROVIDES = "virtual/crypt"
 
