@@ -1,0 +1,36 @@
+From 6436da0b58b59e1b4cd3924bd007108b8ddf73dc Mon Sep 17 00:00:00 2001
+From: Chen Qi <Qi.Chen@windriver.com>
+Date: Tue, 6 Aug 2024 19:41:30 -0700
+Subject: [PATCH] kexec.c: add MFD_NOEXEC_SEAL flag explicitly
+
+Add MFD_NOEXEC_SEAL to avoid kernel warning like below:
+
+  kexec[970]: memfd_create() called without MFD_EXEC or MFD_NOEXEC_SEAL set
+
+As the above two flags are only available in newer kernels, ideally
+we need to do some fallback. But we know for sure that OE scarthgap/master
+is using >6.6 kernel, so we don't need to do such fallback.
+
+Upstream-Status: Inappropriate [OE Specific]
+
+Signed-off-by: Chen Qi <Qi.Chen@windriver.com>
+---
+ kexec/kexec.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/kexec/kexec.c b/kexec/kexec.c
+index 08edfca..c5f52d4 100644
+--- a/kexec/kexec.c
++++ b/kexec/kexec.c
+@@ -655,7 +655,7 @@ static int copybuf_memfd(const char *kernel_buf, size_t size)
+ {
+ 	int fd, count;
+ 
+-	fd = memfd_create("kernel", MFD_ALLOW_SEALING);
++	fd = memfd_create("kernel", MFD_ALLOW_SEALING | MFD_NOEXEC_SEAL);
+ 	if (fd == -1)
+ 		return fd;
+ 
+-- 
+2.25.1
+
