@@ -13,6 +13,10 @@ SRC_URI = "git://github.com/stevegrubb/libcap-ng.git;protocol=https;branch=maste
 SRCREV = "f5d39702622208b3ada064d7b2eaeaf1454c9bd3"
 S = "${WORKDIR}/git"
 
+do_configure:prepend() {
+    touch ${S}/NEWS
+}
+
 EXTRA_OECONF:append:class-target = " --with-capability_header=${STAGING_INCDIR}/linux/capability.h"
 EXTRA_OECONF:append:class-nativesdk = " --with-capability_header=${STAGING_INCDIR}/linux/capability.h"
 
