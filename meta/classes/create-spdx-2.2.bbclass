@@ -275,6 +275,11 @@ def add_package_files(d, doc, spdx_pkg, topdir, get_spdxid, get_types, *, archiv
         verifier.update(v.encode("utf-8"))
     spdx_pkg.packageVerificationCode.packageVerificationCodeValue = verifier.hexdigest()
 
+    # Call hook to set scan result to source files in doc and spdx_pkg
+    scan_set_spdx_hook = d.getVar("SCAN_SET_SPDX_HOOK") or None
+    if scan_set_spdx_hook:
+        scan_set_spdx_hook(d, topdir, doc, spdx_pkg)
+
     return spdx_files
 
 
@@ -612,6 +617,12 @@ python do_create_spdx() {
         with optional_tarfile(recipe_archive, archive_sources) as archive:
             spdx_get_src(d)
 
+            # Call hook to to scan ${SPDXWORK}, save scan result as cache
+            # which will be used by scan_set_spdx_hook later
+            scan_sources_hook = d.getVar("SCAN_SOURCES_HOOK") or None
+            if scan_sources_hook:
+                scan_sources_hook(d, spdx_workdir)
+
             add_package_files(
                 d,
                 doc,
@@ -645,6 +656,13 @@ python do_create_spdx() {
         bb.build.exec_func("read_subpackage_metadata", d)
 
         pkgdest = Path(d.getVar("PKGDEST"))
+
+        # Call hook to scan ${PKGDEST}, save scan result as cache
+        # which will be used by scan_set_spdx_hook later
+        scan_packages_hook = d.getVar("SCAN_PACKAGES_HOOK") or None
+        if scan_packages_hook:
+            scan_packages_hook(d, d.getVar("PKGDEST"))
+
         for package in d.getVar("PACKAGES").split():
             if not oe.packagedata.packaged(package, d):
                 continue
