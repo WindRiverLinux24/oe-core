@@ -743,7 +743,7 @@ sdk_ext_postinst() {
 			echo "# Save and reset OECORE_NATIVE_SYSROOT as buildtools may change it" >> $e
 			echo "SAVED=\"\$OECORE_NATIVE_SYSROOT\"" >> $e
 			echo ". $target_sdk_dir/buildtools/environment-setup*" >> $e
-			echo "OECORE_NATIVE_SYSROOT=\"\$SAVED\"" >> $e
+			echo "export OECORE_NATIVE_SYSROOT=\"\$SAVED\"" >> $e
 		done
 	fi
 

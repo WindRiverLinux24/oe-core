@@ -45,6 +45,10 @@ SRC_URI = "https://download.qemu.org/${BPN}-${PV}.tar.xz \
            file://CVE-2024-4467-0003.patch \
            file://CVE-2024-4467-0004.patch \
            file://CVE-2024-4467-0005.patch \
+           file://CVE-2024-7409-0001.patch \
+           file://CVE-2024-7409-0002.patch \
+           file://CVE-2024-7409-0003.patch \
+           file://CVE-2024-7409-0004.patch \
            file://0001-target-riscv-kvm-change-KVM_REG_RISCV_FP_F-to-u32.patch \
            file://0002-target-riscv-kvm-change-KVM_REG_RISCV_FP_D-to-u64.patch \
            file://0003-target-riscv-kvm-change-timer-regs-size-to-u64.patch \
@@ -81,6 +85,8 @@ CVE_STATUS[CVE-2023-2680] = "not-applicable-platform: RHEL specific issue."
 CVE_STATUS[CVE-2023-3019] = "cpe-incorrect: Applies only against versions before 8.2.0"
 
 CVE_STATUS[CVE-2023-5088] = "cpe-incorrect: Applies only against version 8.2.0 and earlier"
+
+CVE_STATUS[CVE-2023-6683] = "cpe-incorrect: Applies only against version 8.2.1 and earlier"
 
 CVE_STATUS[CVE-2023-6693] = "cpe-incorrect: Applies only against version 8.2.0 and earlier"
 
