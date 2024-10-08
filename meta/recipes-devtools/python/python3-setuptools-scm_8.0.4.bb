@@ -10,6 +10,10 @@ SRC_URI[sha256sum] = "b5f43ff6800669595193fd09891564ee9d1d7dcb196cab4b2506d53a2e
 
 inherit pypi python_setuptools_build_meta
 
+SRC_URI += " \
+    file://0001-fix-timeout-while-using-big-git-repo.patch \
+"
+
 UPSTREAM_CHECK_REGEX = "scm-(?P<pver>.*)\.tar"
 
 DEPENDS += "python3-tomli-native python3-packaging-native python3-typing-extensions-native"

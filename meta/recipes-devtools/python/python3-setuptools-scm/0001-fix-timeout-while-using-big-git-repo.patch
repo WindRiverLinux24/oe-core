@@ -1,0 +1,43 @@
+From 570c9e2a96222a4870dc06e2318ed16c4120ee94 Mon Sep 17 00:00:00 2001
+From: Hongxu Jia <hongxu.jia@windriver.com>
+Date: Tue, 8 Oct 2024 09:02:45 +0800
+Subject: [PATCH] fix timeout while using big git repo
+
+While CPU and disk is busy for bitbake world build, using python3-setuptools-scm to build
+in big git repo (>1GB) broken with timeout occasionally
+
+In this situation, python3-setuptools-scm took 20+ seconds to call git status to
+check git repo dirty or not.
+
+$ cat tmp-glibc/work/x86_64-linux/python3-scancode-native/32.1.0/temp/log.do_compile
+...
+DEBUG: Executing shell function do_compile
+* Getting build dependencies for wheel...
+git status --porcelain --untracked-files=no tmp-glibc/work/x86_64-linux/python3-scancode-native/32.1.0/git
+...
+
+Set timeout to 600s to workaround
+
+Upstream-Status: Inappropriate [wrlinux specific]
+
+Signed-off-by: Hongxu Jia <hongxu.jia@windriver.com>
+---
+ src/setuptools_scm/git.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/setuptools_scm/git.py b/src/setuptools_scm/git.py
+index d511961..335911d 100644
+--- a/src/setuptools_scm/git.py
++++ b/src/setuptools_scm/git.py
+@@ -53,7 +53,7 @@ def run_git(
+     repo: Path,
+     *,
+     check: bool = False,
+-    timeout: int = 20,
++    timeout: int = 600,
+ ) -> _CompletedProcess:
+     return _run(
+         ["git", "--git-dir", repo / ".git", *args],
+-- 
+2.27.0
+
