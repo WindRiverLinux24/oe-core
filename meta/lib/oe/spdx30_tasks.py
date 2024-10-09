@@ -521,6 +521,12 @@ def create_spdx(d):
         bb.debug(1, "Adding source files to SPDX")
         oe.spdx_common.get_patched_src(d)
 
+        # Call hook to scan ${SPDXWORK}, save scan result as cache
+        # which will be used by scan_set_spdx_hook later
+        scan_sources_hook = d.getVar("SCAN_SOURCES_HOOK") or None
+        if scan_sources_hook:
+            scan_sources_hook(d, spdx_workdir)
+
         files = add_package_files(
             d,
             build_objset,
@@ -534,6 +540,19 @@ def create_spdx(d):
             ignore_top_level_dirs=["temp"],
             archive=None,
         )
+
+        # Call hook to set scan result of source files to build object set
+        scan_set_spdx_hook = d.getVar("SCAN_SET_SPDX_HOOK") or None
+        if scan_set_spdx_hook:
+            scan_set_spdx_hook(
+                d,
+                spdx_workdir,
+                build_objset,
+                build_objset,
+                files,
+                license_data
+            )
+
         build_inputs |= files
         index_sources_by_hash(files, dep_sources)
 
@@ -561,6 +580,13 @@ def create_spdx(d):
         bb.build.exec_func("read_subpackage_metadata", d)
 
         pkgdest = Path(d.getVar("PKGDEST"))
+
+        # Call hook to scan ${PKGDEST}, save scan result as cache
+        # which will be used by scan_set_spdx_hook later
+        scan_packages_hook = d.getVar("SCAN_PACKAGES_HOOK") or None
+        if scan_packages_hook:
+            scan_packages_hook(d, d.getVar("PKGDEST"))
+
         for package in d.getVar("PACKAGES").split():
             if not oe.packagedata.packaged(package, d):
                 continue
@@ -719,6 +745,19 @@ def create_spdx(d):
             )
 
             if package_files:
+                # Call hook to set scan result of packages to pkg object set
+                # and build object set
+                scan_set_spdx_hook = d.getVar("SCAN_SET_SPDX_HOOK") or None
+                if scan_set_spdx_hook:
+                    scan_set_spdx_hook(
+                        d,
+                        pkgdest / package,
+                        pkg_objset,
+                        build_objset,
+                        package_files,
+                        license_data,
+                    )
+
                 pkg_objset.new_relationship(
                     [spdx_package],
                     oe.spdx30.RelationshipType.contains,
@@ -739,6 +778,13 @@ def create_spdx(d):
 
     if include_sources:
         bb.debug(1, "Adding sysroot files to SPDX")
+
+        # Call hook to scan ${COMPONENTS_DIR}/${PACKAGE_ARCH}/${PN},
+        # save scan result as cache which will be used by scan_set_spdx_hook later
+        scan_sysroot_hook = d.getVar("SCAN_SYSROOT_HOOK") or None
+        if scan_sysroot_hook:
+            scan_sysroot_hook(d, d.expand("${COMPONENTS_DIR}/${PACKAGE_ARCH}/${PN}"))
+
         sysroot_files = add_package_files(
             d,
             build_objset,
@@ -750,6 +796,18 @@ def create_spdx(d):
         )
 
         if sysroot_files:
+            # Call hook to set scan result of sysroot to build object set
+            scan_set_spdx_hook = d.getVar("SCAN_SET_SPDX_HOOK") or None
+            if scan_set_spdx_hook:
+                scan_set_spdx_hook(
+                    d,
+                    d.expand("${COMPONENTS_DIR}/${PACKAGE_ARCH}/${PN}"),
+                    build_objset,
+                    build_objset,
+                    sysroot_files,
+                    license_data
+                )
+
             build_objset.new_scoped_relationship(
                 [build],
                 oe.spdx30.RelationshipType.hasOutput,
