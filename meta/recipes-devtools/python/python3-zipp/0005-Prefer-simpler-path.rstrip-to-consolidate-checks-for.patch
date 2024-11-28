@@ -1,0 +1,29 @@
+From 5b4e4ff80e46d786ca1ebd726b399e6301d5c231 Mon Sep 17 00:00:00 2001
+From: "Jason R. Coombs" <jaraco@jaraco.com>
+Date: Mon, 26 Aug 2024 11:46:25 -0400
+Subject: [PATCH 5/5] Prefer simpler path.rstrip to consolidate checks for
+ empty or only paths.
+
+Upstream-Status: Backport [https://github.com/jaraco/zipp/commit/cc61e6140f0dfde2ff372db932442cf6df890f09]
+CVE: CVE-2024-5569
+Signed-off-by: Hongxu Jia <hongxu.jia@windriver.com>
+---
+ zipp/__init__.py | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/zipp/__init__.py b/zipp/__init__.py
+index e43d1de..3d93e1e 100644
+--- a/zipp/__init__.py
++++ b/zipp/__init__.py
+@@ -54,7 +54,7 @@ def _ancestry(path):
+     ['//b//d///f', '//b//d', '//b']
+     """
+     path = path.rstrip(posixpath.sep)
+-    while path and not path.endswith(posixpath.sep):
++    while path.rstrip(posixpath.sep):
+         yield path
+         path, tail = posixpath.split(path)
+ 
+-- 
+2.34.1
+
