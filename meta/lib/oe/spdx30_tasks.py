@@ -461,7 +461,7 @@ def create_spdx(d):
     if not include_vex in ("none", "current", "all"):
         bb.fatal("SPDX_INCLUDE_VEX must be one of 'none', 'current', 'all'")
 
-    build_objset = oe.sbom30.ObjectSet.new_objset(d, d.getVar("PN"), link_prefix="recipe")
+    build_objset = oe.sbom30.ObjectSet.new_objset(d, d.getVar("PN"), link_prefix=f"{pkg_arch}-recipe")
 
     build = build_objset.new_task_build("recipe", "recipe")
     build_objset.set_element_alias(build)
@@ -595,7 +595,7 @@ def create_spdx(d):
 
             bb.debug(1, "Creating SPDX for package %s" % pkg_name)
 
-            pkg_objset = oe.sbom30.ObjectSet.new_objset(d, pkg_name, link_prefix="package")
+            pkg_objset = oe.sbom30.ObjectSet.new_objset(d, pkg_name, link_prefix=f"{pkg_arch}-package")
 
             spdx_package = pkg_objset.add_root(
                 oe.spdx30.software_Package(
@@ -846,7 +846,7 @@ def create_package_spdx(d):
     # Any element common to all packages that need to be referenced by ID
     # should be written into this objset set
     common_objset = oe.sbom30.ObjectSet.new_objset(
-        d, "%s-package-common" % d.getVar("PN"), link_prefix="package"
+        d, "%s-package-common" % d.getVar("PN"), link_prefix=f"{pkg_arch}-package"
     )
 
     pkgdest = Path(d.getVar("PKGDEST"))
@@ -865,7 +865,7 @@ def create_package_spdx(d):
             "packages-staging",
             pkg_name,
             oe.spdx30.software_Package,
-            link_prefix="package",
+            link_prefix=f"{pkg_arch}-package",
             software_primaryPurpose=oe.spdx30.software_SoftwarePurpose.install,
         )
 
