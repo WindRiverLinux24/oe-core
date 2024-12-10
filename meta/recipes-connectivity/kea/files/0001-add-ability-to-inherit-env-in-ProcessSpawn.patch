@@ -1,0 +1,319 @@
+From b880029a0e7ce0fbd5b8539ebe47cb08ad3df667 Mon Sep 17 00:00:00 2001
+From: Andrei Pavel <andrei@isc.org>
+Date: Tue, 13 Feb 2024 12:59:44 +0200
+Subject: [PATCH] add ability to inherit env in ProcessSpawn
+
+Upstream-Status: Backport
+[https://gitlab.isc.org/isc-projects/kea/-/commit/253eadd87887600a211bb38746f96e2dead31431]
+
+Signed-off-by: Yi Zhao <yi.zhao@windriver.com>
+---
+ src/lib/asiolink/process_spawn.cc             | 50 ++++++++++---
+ src/lib/asiolink/process_spawn.h              |  5 +-
+ .../asiolink/tests/process_spawn_app.sh.in    | 37 +++++-----
+ .../asiolink/tests/process_spawn_unittest.cc  | 72 ++++++++++++++++++-
+ 4 files changed, 132 insertions(+), 32 deletions(-)
+
+diff --git a/src/lib/asiolink/process_spawn.cc b/src/lib/asiolink/process_spawn.cc
+index a24506576b..e5f9bdf167 100644
+--- a/src/lib/asiolink/process_spawn.cc
++++ b/src/lib/asiolink/process_spawn.cc
+@@ -9,10 +9,12 @@
+ #include <asiolink/io_service_signal.h>
+ #include <asiolink/process_spawn.h>
+ #include <exceptions/exceptions.h>
+-#include <cstring>
++
+ #include <functional>
+ #include <map>
+ #include <mutex>
++
++#include <cstring>
+ #include <signal.h>
+ #include <stdlib.h>
+ #include <errno.h>
+@@ -25,6 +27,8 @@
+ using namespace std;
+ namespace ph = std::placeholders;
+ 
++extern char **environ;
++
+ namespace isc {
+ namespace asiolink {
+ 
+@@ -77,10 +81,13 @@ public:
+     /// @param executable A full path to the program to be executed.
+     /// @param args Arguments for the program to be executed.
+     /// @param vars Environment variables for the program to be executed.
++    /// @param inherit_env whether the spawned process will inherit the
++    ///        environment before adding 'vars' on top.
+     ProcessSpawnImpl(IOServicePtr io_service,
+                      const std::string& executable,
+                      const ProcessArgs& args,
+-                     const ProcessEnvVars& vars);
++                     const ProcessEnvVars& vars,
++                     const bool inherit_env);
+ 
+     /// @brief Destructor.
+     ~ProcessSpawnImpl();
+@@ -238,9 +245,24 @@ void ProcessSpawnImpl::IOSignalSetInitializer::initIOSignalSet(IOServicePtr io_s
+ ProcessSpawnImpl::ProcessSpawnImpl(IOServicePtr io_service,
+                                    const std::string& executable,
+                                    const ProcessArgs& args,
+-                                   const ProcessEnvVars& vars)
++                                   const ProcessEnvVars& vars,
++                                   const bool inherit_env)
+     : executable_(executable), args_(new char*[args.size() + 2]),
+-      vars_(new char*[vars.size() + 1]), store_(false), io_service_(io_service) {
++      store_(false), io_service_(io_service) {
++
++    // Size of vars except the trailing null
++    size_t vars_size;
++    if (inherit_env) {
++        size_t i(0);
++        while (environ[i]) {
++            ++i;
++        }
++        vars_size = i + vars.size();
++    } else {
++        vars_size = vars.size();
++    }
++
++    vars_ = boost::shared_ptr<char*[]>(new char*[vars_size + 1]);
+ 
+     struct stat st;
+ 
+@@ -256,16 +278,23 @@ ProcessSpawnImpl::ProcessSpawnImpl(IOServicePtr io_service,
+     // all pointers within an array to NULL to indicate that they haven't
+     // been allocated yet.
+     memset(args_.get(), 0, (args.size() + 2) * sizeof(char*));
+-    memset(vars_.get(), 0, (vars.size() + 1) * sizeof(char*));
++    memset(vars_.get(), 0, (vars_size + 1) * sizeof(char*));
+     // By convention, the first argument points to an executable name.
+     args_[0] = allocateInternal(executable_);
+     // Copy arguments to the array.
+-    for (int i = 1; i <= args.size(); ++i) {
++    for (size_t i = 1; i <= args.size(); ++i) {
+         args_[i] = allocateInternal(args[i - 1]);
+     }
+     // Copy environment variables to the array.
+-    for (int i = 0; i < vars.size(); ++i) {
+-        vars_[i] = allocateInternal(vars[i]);
++    size_t i(0);
++    if (inherit_env) {
++        while (environ[i]) {
++            vars_[i] = allocateInternal(environ[i]);
++            ++i;
++        }
++    }
++    for (size_t j = 0; j < vars.size(); ++j) {
++        vars_[i + j] = allocateInternal(vars[j]);
+     }
+ }
+ 
+@@ -410,8 +439,9 @@ ProcessSpawnImpl::clearState(const pid_t pid) {
+ ProcessSpawn::ProcessSpawn(IOServicePtr io_service,
+                            const std::string& executable,
+                            const ProcessArgs& args,
+-                           const ProcessEnvVars& vars)
+-    : impl_(new ProcessSpawnImpl(io_service, executable, args, vars)) {
++                           const ProcessEnvVars& vars,
++                           const bool inherit_env /* = false */)
++    : impl_(new ProcessSpawnImpl(io_service, executable, args, vars, inherit_env)) {
+ }
+ 
+ std::string
+diff --git a/src/lib/asiolink/process_spawn.h b/src/lib/asiolink/process_spawn.h
+index ca72ce8975..7d6e662301 100644
+--- a/src/lib/asiolink/process_spawn.h
++++ b/src/lib/asiolink/process_spawn.h
+@@ -67,10 +67,13 @@ public:
+     /// @param executable A full path to the program to be executed.
+     /// @param args Arguments for the program to be executed.
+     /// @param vars Environment variables for the program to be executed.
++    /// @param inherit_env whether the spawned process will inherit the
++    ///        environment before adding 'vars' on top.
+     ProcessSpawn(isc::asiolink::IOServicePtr io_service,
+                  const std::string& executable,
+                  const ProcessArgs& args = ProcessArgs(),
+-                 const ProcessEnvVars& vars = ProcessEnvVars());
++                 const ProcessEnvVars& vars = ProcessEnvVars(),
++                 const bool inherit_env = false);
+ 
+     /// @brief Destructor.
+     ~ProcessSpawn() = default;
+diff --git a/src/lib/asiolink/tests/process_spawn_app.sh.in b/src/lib/asiolink/tests/process_spawn_app.sh.in
+index eab7310711..594ca3b77a 100644
+--- a/src/lib/asiolink/tests/process_spawn_app.sh.in
++++ b/src/lib/asiolink/tests/process_spawn_app.sh.in
+@@ -28,48 +28,45 @@
+ # used.
+ set -eu
+ 
+-exit_code=
++exit_code=0
+ 
+-while test "${#}" -gt 0
+-do
++# The exit code of 32 is returned when no args specified.
++if test "${#}" = 0; then
++    exit_code=32
++fi
++
++while test "${#}" -gt 0; do
+     option=${1}
++    shift
+     case ${option} in
+         -p)
+             exit_code=${$}
+             ;;
+         -e)
+-            shift
+             exit_code=${1-}
++            shift
+             ;;
+         -s)
++            sleep "${1-0}"
++            exit_code=12
+             shift
+-            sleep "${1}"
+             ;;
+         -v)
+-            shift
+             VAR_NAME=${1}
+             shift
+             VAR_VALUE=${1}
+-            EXPECTED=$(env | grep -E "^${VAR_NAME}=")
++            shift
++            EXPECTED=$(env | grep -E "^${VAR_NAME}=" || true)
+             if ! test "${VAR_NAME}=${VAR_VALUE}" = "${EXPECTED}"; then
+-                exit 123
++                exit_code=34
++            else
++                exit_code=56
+             fi
+             ;;
+         *)
+-            exit 123
++            exit_code=78
+             ;;
+     esac
+-    # We've shifted in the loop so we may have run out of parameters in the
+-    # meantime. Check again.
+-    if test "${#}" -gt 0; then
+-      shift
+-    fi
+ done
+ 
+-# The exit code of 32 is returned when no args specified or
+-# when only the -s arg has been specified.
+-if [ -z "${exit_code}" ]; then
+-    exit 32
+-fi
+-
+ exit "${exit_code}"
+diff --git a/src/lib/asiolink/tests/process_spawn_unittest.cc b/src/lib/asiolink/tests/process_spawn_unittest.cc
+index 0fda5a1cf8..572dee2128 100644
+--- a/src/lib/asiolink/tests/process_spawn_unittest.cc
++++ b/src/lib/asiolink/tests/process_spawn_unittest.cc
+@@ -128,6 +128,7 @@ TEST_F(ProcessSpawnTest, spawnWithArgs) {
+     ASSERT_EQ(1, processed_signals_.size());
+     ASSERT_EQ(SIGCHLD, processed_signals_[0]);
+ 
++    // Exit code 64 as requested.
+     EXPECT_EQ(64, process.getExitStatus(pid));
+ }
+ 
+@@ -161,7 +162,8 @@ TEST_F(ProcessSpawnTest, spawnWithArgsAndEnvVars) {
+     ASSERT_EQ(1, processed_signals_.size());
+     ASSERT_EQ(SIGCHLD, processed_signals_[0]);
+ 
+-    EXPECT_EQ(32, process.getExitStatus(pid));
++    // 56 means successful comparison of env vars.
++    EXPECT_EQ(56, process.getExitStatus(pid));
+ }
+ 
+ // This test verifies that the single ProcessSpawn object can be used
+@@ -245,6 +247,7 @@ TEST_F(ProcessSpawnTest, spawnNoArgs) {
+     ASSERT_EQ(1, processed_signals_.size());
+     ASSERT_EQ(SIGCHLD, processed_signals_[0]);
+ 
++    // 32 means no args.
+     EXPECT_EQ(32, process.getExitStatus(pid));
+ 
+     ASSERT_NO_THROW(pid = process.spawn(true));
+@@ -347,4 +350,71 @@ TEST_F(ProcessSpawnTest, isRunning) {
+     ASSERT_EQ(SIGCHLD, processed_signals_[0]);
+ }
+ 
++// This test verifies inheritance of environment.
++TEST_F(ProcessSpawnTest, inheritEnv) {
++    // Run the process which sleeps for 10 seconds, so as we have
++    // enough time to check if it is running.
++    vector<string> args{"-v", "VAR", "value"};
++
++    ProcessEnvVars vars{"VAR=value"};
++
++    ProcessSpawn process(io_service_, TEST_SCRIPT_SH, args, vars,
++                         /* inherit_env = */ true);
++    pid_t pid = 0;
++    ASSERT_NO_THROW(pid = process.spawn());
++
++    // Set test fail safe.
++    setTestTime(1000);
++
++    // The next handler executed is IOSignal's handler.
++    io_service_->runOne();
++
++    // The first handler executed is the IOSignal's internal timer expire
++    // callback.
++    io_service_->runOne();
++
++    // Polling once to be sure.
++    io_service_->poll();
++
++    ASSERT_EQ(1, processed_signals_.size());
++    ASSERT_EQ(SIGCHLD, processed_signals_[0]);
++
++    // 56 means successful comparison of env vars.
++    EXPECT_EQ(56, process.getExitStatus(pid));
++}
++
++// This test verifies inheritance of environment when a variable is inherited
++// from parent. It assumes PATH is set.
++TEST_F(ProcessSpawnTest, inheritEnvWithParentVar) {
++    // Run the process which sleeps for 10 seconds, so as we have
++    // enough time to check if it is running.
++    vector<string> args{"-v", "PATH", "value"};
++
++    ProcessEnvVars vars{"VAR=value"};
++
++    ProcessSpawn process(io_service_, TEST_SCRIPT_SH, args, vars,
++                         /* inherit_env = */ true);
++    pid_t pid = 0;
++    ASSERT_NO_THROW(pid = process.spawn());
++
++    // Set test fail safe.
++    setTestTime(1000);
++
++    // The next handler executed is IOSignal's handler.
++    io_service_->runOne();
++
++    // The first handler executed is the IOSignal's internal timer expire
++    // callback.
++    io_service_->runOne();
++
++    // Polling once to be sure.
++    io_service_->poll();
++
++    ASSERT_EQ(1, processed_signals_.size());
++    ASSERT_EQ(SIGCHLD, processed_signals_[0]);
++
++    // 34 means failed comparison of env vars.
++    EXPECT_EQ(34, process.getExitStatus(pid));
++}
++
+ } // end of anonymous namespace
+-- 
+2.25.1
+
