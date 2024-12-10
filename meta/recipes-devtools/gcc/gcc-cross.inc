@@ -7,6 +7,7 @@ PROVIDES = "virtual/${TARGET_PREFIX}gcc virtual/${TARGET_PREFIX}g++"
 python () {
     if d.getVar("TARGET_OS").startswith("linux"):
         d.setVar("EXTRADEPENDS", "linux-libc-headers")
+        d.appendVarFlag("do_create_spdx", "vardeps", " SSTATE_ARCHS_TUNEPKG")
 }
 
 PN = "gcc-cross-${TARGET_ARCH}"
