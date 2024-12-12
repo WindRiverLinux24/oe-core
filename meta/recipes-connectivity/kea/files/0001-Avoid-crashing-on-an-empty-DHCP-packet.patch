@@ -1,0 +1,73 @@
+From 01e8f97e0fa4565e94502b8e0472e0c50d8db834 Mon Sep 17 00:00:00 2001
+From: Mikael Beckius <mikael.beckius@windriver.com>
+Date: Thu, 12 Dec 2024 08:45:33 +0100
+Subject: [PATCH] Avoid crashing on an empty DHCP packet
+
+Prefer container.data() over &container[0].
+
+With _GLIBCXX_ASSERTION defined it is not possible to do
+container[0] if container is empty as that will result in:
+/usr/include/c++/13.3.0/bits/stl_vector.h:1128:
+ std::vector<_Tp, _Alloc>::reference std::vector<_Tp, _Alloc>::operator[](size_type)
+[with _Tp = unsigned char; _Alloc = std::allocator<unsigned char>;
+reference = unsigned char&; size_type = long unsigned int]: Assertion '__n < this->size()' failed
+
+kea uses this construct throughout the code but this patch only
+addresses a very small subset.
+
+Even with this fix "Pkt4::Pkt4(const uint8_t* data, size_t len)"
+will throw an exception:
+  if (len < DHCPV4_PKT_HDR_LEN)
+    throw...
+
+Upstream-Status: Pending
+
+Signed-off-by: Mikael Beckius <mikael.beckius@windriver.com>
+---
+ src/lib/dhcp/pkt4.cc           | 2 +-
+ src/lib/dhcp/pkt_filter_lpf.cc | 2 +-
+ src/lib/util/buffer.h          | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/src/lib/dhcp/pkt4.cc b/src/lib/dhcp/pkt4.cc
+index 595adfb6e8..9b6644cc80 100644
+--- a/src/lib/dhcp/pkt4.cc
++++ b/src/lib/dhcp/pkt4.cc
+@@ -151,7 +151,7 @@ Pkt4::pack() {
+ void
+ Pkt4::unpack() {
+     // input buffer (used during message reception)
+-    isc::util::InputBuffer buffer_in(&data_[0], data_.size());
++    isc::util::InputBuffer buffer_in(data_.data(), data_.size());
+ 
+     if (buffer_in.getLength() < DHCPV4_PKT_HDR_LEN) {
+         isc_throw(OutOfRange, "Received truncated DHCPv4 packet (len="
+diff --git a/src/lib/dhcp/pkt_filter_lpf.cc b/src/lib/dhcp/pkt_filter_lpf.cc
+index 791e8635d2..b1e88db80d 100644
+--- a/src/lib/dhcp/pkt_filter_lpf.cc
++++ b/src/lib/dhcp/pkt_filter_lpf.cc
+@@ -272,7 +272,7 @@ PktFilterLPF::receive(Iface& iface, const SocketInfo& socket_info) {
+     buf.readVector(dhcp_buf, buf.getLength() - buf.getPosition());
+ 
+     // Decode DHCP data into the Pkt4 object.
+-    Pkt4Ptr pkt = Pkt4Ptr(new Pkt4(&dhcp_buf[0], dhcp_buf.size()));
++    Pkt4Ptr pkt = Pkt4Ptr(new Pkt4(dhcp_buf.data(), dhcp_buf.size()));
+ 
+     // Set the appropriate packet members using data collected from
+     // the decoded headers.
+diff --git a/src/lib/util/buffer.h b/src/lib/util/buffer.h
+index 4f918566af..59430fa19e 100644
+--- a/src/lib/util/buffer.h
++++ b/src/lib/util/buffer.h
+@@ -207,7 +207,7 @@ public:
+         }
+ 
+         data.resize(len);
+-        readData(&data[0], len);
++        readData(data.data(), len);
+     }
+ 
+ private:
+-- 
+2.43.0
+
