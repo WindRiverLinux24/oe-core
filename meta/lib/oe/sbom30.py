@@ -217,11 +217,9 @@ def to_list(l):
 
 
 class ObjectSet(oe.spdx30.SHACLObjectSet):
-    def __init__(self, d, name=None, link_prefix=None):
+    def __init__(self, d):
         super().__init__()
         self.d = d
-        self.name = name
-        self.link_prefix = link_prefix
 
     def create_index(self):
         self.by_sha256_hash = {}
@@ -324,8 +322,6 @@ class ObjectSet(oe.spdx30.SHACLObjectSet):
             uuid.NAMESPACE_DNS, self.d.getVar("SPDX_UUID_NAMESPACE")
         )
         pn = self.d.getVar("PN")
-        if self.link_prefix and self.name:
-            pn = "%s-%s" % (self.link_prefix, self.name)
         return "%s/%s-%s" % (
             self.d.getVar("SPDX_NAMESPACE_PREFIX"),
             pn,
@@ -345,15 +341,12 @@ class ObjectSet(oe.spdx30.SHACLObjectSet):
             elif namespace not in e._id:
                 bb.warn(f"Namespace {namespace} not found in {e._id}")
             else:
-                pn = self.d.getVar("PN")
-                if self.link_prefix and self.name:
-                    pn = "%s-%s" % (self.link_prefix, self.name)
                 alias_ext = set_alias(
                     e,
                     e._id.replace(unihash, "UNIHASH").replace(
                         namespace,
-                        f"{self.d.getVar('SPDX_NAMESPACE_PREFIX')}/openembedded-alias/"
-                        + pn,
+                        "http://spdx.org/spdxdocs/openembedded-alias/"
+                        + self.d.getVar("PN"),
                     ),
                 )
 
@@ -812,8 +805,8 @@ class ObjectSet(oe.spdx30.SHACLObjectSet):
         )
 
     @classmethod
-    def new_objset(cls, d, name, copy_from_bitbake_doc=True, link_prefix=None):
-        objset = cls(d, name=name, link_prefix=link_prefix)
+    def new_objset(cls, d, name, copy_from_bitbake_doc=True):
+        objset = cls(d)
 
         document = oe.spdx30.SpdxDocument(
             _id=objset.new_spdxid("document", name),
@@ -894,9 +887,9 @@ class ObjectSet(oe.spdx30.SHACLObjectSet):
         return missing_spdxids
 
 
-def load_jsonld(d, path, required=False, name=None, link_prefix=None):
+def load_jsonld(d, path, required=False):
     deserializer = oe.spdx30.JSONLDDeserializer()
-    objset = ObjectSet(d, name=name, link_prefix=link_prefix)
+    objset = ObjectSet(d)
     try:
         with path.open("rb") as f:
             deserializer.read(f, objset)
@@ -925,9 +918,9 @@ def jsonld_hash_path(_id):
     return Path("by-spdxid-hash") / h[:2], h
 
 
-def load_jsonld_by_arch(d, arch, subdir, name, *, required=False, link_prefix=None):
+def load_jsonld_by_arch(d, arch, subdir, name, *, required=False):
     path = jsonld_arch_path(d, arch, subdir, name)
-    objset = load_jsonld(d, path, required=required, name=name, link_prefix=link_prefix)
+    objset = load_jsonld(d, path, required=required)
     if objset is not None:
         return (objset, path)
     return (None, None)
@@ -1056,8 +1049,8 @@ def find_root_obj_in_jsonld(d, subdir, fn_name, obj_type, **attr_filter):
     return spdx_obj, objset
 
 
-def load_obj_in_jsonld(d, arch, subdir, fn_name, obj_type, link_prefix=None, **attr_filter):
-    objset, fn = load_jsonld_by_arch(d, arch, subdir, fn_name, required=True, link_prefix=link_prefix)
+def load_obj_in_jsonld(d, arch, subdir, fn_name, obj_type, **attr_filter):
+    objset, fn = load_jsonld_by_arch(d, arch, subdir, fn_name, required=True)
 
     spdx_obj = objset.find_filter(obj_type, **attr_filter)
     if not spdx_obj:
