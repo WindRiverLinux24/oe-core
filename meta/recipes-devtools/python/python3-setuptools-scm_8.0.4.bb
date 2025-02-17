@@ -12,6 +12,7 @@ inherit pypi python_setuptools_build_meta
 
 SRC_URI += " \
     file://0001-fix-timeout-while-using-big-git-repo.patch \
+    file://0001-fix-957-add-subprocess-timeout.patch \
 "
 
 UPSTREAM_CHECK_REGEX = "scm-(?P<pver>.*)\.tar"

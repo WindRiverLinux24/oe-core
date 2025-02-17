@@ -1,0 +1,78 @@
+From 2ac4f084def6db53b454b967b062bed2f945aa03 Mon Sep 17 00:00:00 2001
+From: Ronny Pfannschmidt <opensource@ronnypfannschmidt.de>
+Date: Fri, 5 Jan 2024 13:34:37 +0100
+Subject: [PATCH] fix #957 - add subprocess timeout
+
+Upstream-Status: Backport [https://github.com/pypa/setuptools-scm/commit/2ac4f084def6db53b454b967b062bed2f945aa03]
+Signed-off-by: Hongxu Jia <hongxu.jia@windriver.com>
+---
+ changelog.d/20240105_133254_subprocess_timeout_var.md |  4 ++++
+ docs/overrides.md                                     |  7 +++++++
+ src/setuptools_scm/_run_cmd.py                        | 11 +++++++++--
+ 3 files changed, 20 insertions(+), 2 deletions(-)
+ create mode 100644 changelog.d/20240105_133254_subprocess_timeout_var.md
+
+diff --git a/changelog.d/20240105_133254_subprocess_timeout_var.md b/changelog.d/20240105_133254_subprocess_timeout_var.md
+new file mode 100644
+index 0000000..78ecab2
+--- /dev/null
++++ b/changelog.d/20240105_133254_subprocess_timeout_var.md
+@@ -0,0 +1,4 @@
++
++### Changed
++
++- fix #957 - add subprocess timeout control env var
+diff --git a/docs/overrides.md b/docs/overrides.md
+index 5114a84..22d285e 100644
+--- a/docs/overrides.md
++++ b/docs/overrides.md
+@@ -14,3 +14,10 @@ where the dist name normalization follows adapted PEP 503 semantics.
+ 
+ setuptools_scm parses the environment variable `SETUPTOOLS_SCM_OVERRIDES_FOR_${NORMALIZED_DIST_NAME}`
+ as a toml inline map to override the configuration data from `pyproject.toml`.
++
++## subprocess timeouts
++
++The environment variable `SETUPTOOLS_SCM_SUBPROCESS_TIMEOUT` allows to override the subprocess timeout.
++The default is 40 seconds and should work for most needs. However, users with git lfs + windows reported
++situations where this was not enough.
++
+diff --git a/src/setuptools_scm/_run_cmd.py b/src/setuptools_scm/_run_cmd.py
+index 3dfbda5..a64f904 100644
+--- a/src/setuptools_scm/_run_cmd.py
++++ b/src/setuptools_scm/_run_cmd.py
+@@ -25,7 +25,12 @@ else:
+ # unfortunately github CI for windows sometimes needs
+ # up to 30 seconds to start a command
+ 
+-BROKEN_TIMEOUT: Final[int] = 40
++
++def _get_timeout(env: Mapping[str, str]) -> int:
++    return int(env.get("SETUPTOOLS_SCM_SUBPROCESS_TIMEOUT") or 40)
++
++
++BROKEN_TIMEOUT: Final[int] = _get_timeout(os.environ)
+ 
+ log = _log.log.getChild("run_cmd")
+ 
+@@ -132,7 +137,7 @@ def run(
+     *,
+     strip: bool = True,
+     trace: bool = True,
+-    timeout: int = BROKEN_TIMEOUT,
++    timeout: int | None = None,
+     check: bool = False,
+ ) -> CompletedProcess:
+     if isinstance(cmd, str):
+@@ -141,6 +146,8 @@ def run(
+         cmd = [os.fspath(x) for x in cmd]
+     cmd_4_trace = " ".join(map(_unsafe_quote_for_display, cmd))
+     log.debug("at %s\n    $ %s ", cwd, cmd_4_trace)
++    if timeout is None:
++        timeout = BROKEN_TIMEOUT
+     res = subprocess.run(
+         cmd,
+         capture_output=True,
+-- 
+2.25.1
+
