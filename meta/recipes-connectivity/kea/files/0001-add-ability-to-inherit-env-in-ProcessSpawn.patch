@@ -7,6 +7,7 @@ Upstream-Status: Backport
 [https://gitlab.isc.org/isc-projects/kea/-/commit/253eadd87887600a211bb38746f96e2dead31431]
 
 Signed-off-by: Yi Zhao <yi.zhao@windriver.com>
+Signed-off-by: Mikael Beckius <mikael.beckius@windriver.com>
 ---
  src/lib/asiolink/process_spawn.cc             | 50 ++++++++++---
  src/lib/asiolink/process_spawn.h              |  5 +-
@@ -213,7 +214,7 @@ index eab7310711..594ca3b77a 100644
 -
  exit "${exit_code}"
 diff --git a/src/lib/asiolink/tests/process_spawn_unittest.cc b/src/lib/asiolink/tests/process_spawn_unittest.cc
-index 0fda5a1cf8..572dee2128 100644
+index 0fda5a1cf8..780e7f4606 100644
 --- a/src/lib/asiolink/tests/process_spawn_unittest.cc
 +++ b/src/lib/asiolink/tests/process_spawn_unittest.cc
 @@ -128,6 +128,7 @@ TEST_F(ProcessSpawnTest, spawnWithArgs) {
@@ -263,11 +264,11 @@ index 0fda5a1cf8..572dee2128 100644
 +    setTestTime(1000);
 +
 +    // The next handler executed is IOSignal's handler.
-+    io_service_->runOne();
++    io_service_->run_one();
 +
 +    // The first handler executed is the IOSignal's internal timer expire
 +    // callback.
-+    io_service_->runOne();
++    io_service_->run_one();
 +
 +    // Polling once to be sure.
 +    io_service_->poll();
@@ -297,11 +298,11 @@ index 0fda5a1cf8..572dee2128 100644
 +    setTestTime(1000);
 +
 +    // The next handler executed is IOSignal's handler.
-+    io_service_->runOne();
++    io_service_->run_one();
 +
 +    // The first handler executed is the IOSignal's internal timer expire
 +    // callback.
-+    io_service_->runOne();
++    io_service_->run_one();
 +
 +    // Polling once to be sure.
 +    io_service_->poll();
