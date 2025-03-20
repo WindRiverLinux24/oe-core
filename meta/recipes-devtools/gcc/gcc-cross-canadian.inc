@@ -63,6 +63,9 @@ do_configure () {
 }
 
 do_compile () {
+	remove_sysroot_paths_from_configargs '/host'
+	remove_sysroot_paths_from_checksum_options '${STAGING_DIR_HOST}' '/host'
+
 	oe_runmake all-host configure-target-libgcc
 	(cd ${B}/${TARGET_SYS}/libgcc; oe_runmake enable-execute-stack.c unwind.h md-unwind-support.h sfp-machine.h gthr-default.h)
 }
@@ -114,6 +117,11 @@ do_install () {
 
 	# We don't care about the gcc-<version> copies
 	rm -f ${D}${bindir}/*gcc-${BINV}*
+
+        # Remove buildpaths from pthread.h
+        sed -i -e "s|${RECIPE_SYSROOT_NATIVE}|/not/exist|g" \
+        -e "s|${RECIPE_SYSROOT}|/not/exist|g" \
+        ${D}${libdir}/gcc/${TARGET_SYS}/${BINV}/include-fixed/pthread.h
 
 	# Cleanup empty directories which are not shipped
 	# we use rmdir instead of 'rm -f' to ensure the non empty directories are not deleted
