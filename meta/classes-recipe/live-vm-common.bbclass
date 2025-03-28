@@ -54,13 +54,21 @@ efi_populate_common() {
         fi
 }
 
+# Kernel(with initrd) image in efi.img of ISO live
+EFI_ISO_KERNEL ??= "1"
+
 efi_iso_populate() {
         iso_dir=$1
         efi_populate $iso_dir
+
+        rm -rf ${EFIIMGDIR}
         # Build a EFI directory to create efi.img
         mkdir -p ${EFIIMGDIR}/${EFIDIR}
         cp $iso_dir/${EFIDIR}/* ${EFIIMGDIR}${EFIDIR}
-        cp $iso_dir/${KERNEL_IMAGETYPE} ${EFIIMGDIR}
+        if [ "${EFI_ISO_KERNEL}" = "1" ]; then
+                cp $iso_dir/${KERNEL_IMAGETYPE} ${EFIIMGDIR}
+        fi
+
 
         EFIPATH=$(echo "${EFIDIR}" | sed 's/\//\\/g')
 
@@ -70,7 +78,7 @@ efi_iso_populate() {
             printf 'fs0:%s\%s\n' "$EFIPATH" "${EFI_BOOT_IMAGE}" >${EFIIMGDIR}/startup.nsh
         fi
 
-        if [ -f "$iso_dir/initrd" ] ; then
+        if [ -f "$iso_dir/initrd" -a "${EFI_ISO_KERNEL}" = "1" ] ; then
                 cp $iso_dir/initrd ${EFIIMGDIR}
         fi
 }
