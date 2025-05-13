@@ -207,7 +207,14 @@ do_install_ptest () {
     # Tweak test d_type-check to use python3 instead of python
     sed -i "1s@.*@#!/usr/bin/python3@" ${D}${PTEST_PATH}/tests/d_type-check
     install ${B}/src/getlimits ${D}/${bindir}
-    
+
+    # Fix for single-binary
+    for prog in ${D}${PTEST_PATH}/src/*; do
+        if [ -f $prog ]; then
+            sed -i "1s@#!.*/src/coreutils @#!/usr/bin/coreutils @" $prog
+        fi
+    done
+
     # handle multilib
     sed -i s:@libdir@:${libdir}:g ${D}${PTEST_PATH}/run-ptest
 }
