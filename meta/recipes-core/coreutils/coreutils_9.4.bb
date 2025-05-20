@@ -208,7 +208,7 @@ do_install_ptest () {
     # Fix for single-binary
     for prog in ${D}${PTEST_PATH}/src/*; do
         if [ -f $prog ]; then
-            sed -i "1s@#!.*/src/coreutils @#!/usr/bin/coreutils @" $prog
+            sed -i "1s@#!.*/src/coreutils @#!${bindir}/coreutils @" $prog
         fi
     done
 
