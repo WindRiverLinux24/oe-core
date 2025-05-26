@@ -21,6 +21,8 @@ SRC_URI = "${GNOME_MIRROR}/glib/${SHRT_VER}/glib-${PV}.tar.xz \
            file://gdatetime-test-fail-0001.patch \
            file://gdatetime-test-fail-0002.patch \
            file://gdatetime-test-fail-0003.patch \
+           file://CVE-2025-4373-0001.patch \
+           file://CVE-2025-4373-0002.patch \
            "
 SRC_URI:append:class-native = " file://relocate-modules.patch \ 
                                 file://0001-meson.build-do-not-enable-pidfd-features-on-native-g.patch \
