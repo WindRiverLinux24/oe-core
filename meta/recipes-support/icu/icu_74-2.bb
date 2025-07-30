@@ -122,6 +122,7 @@ SRC_URI = "${BASE_SRC_URI};name=code \
            file://fix-install-manx.patch \
            file://0001-icu-Added-armeb-support.patch \
            file://0001-pkgdata-increase-command-buffer-size.patch \
+           file://CVE-2025-5222.patch \
            "
 
 SRC_URI:append:class-target = "\
